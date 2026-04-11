@@ -31,3 +31,20 @@ class RegisterSerializer(serializers.ModelSerializer):
         foyer = Foyer.objects.create(nom=f"Foyer de {user.first_name}", code=code)
         MembreFoyer.objects.create(user=user, foyer=foyer, role='admin')
         return user
+
+class FoyerSerializer(serializers.ModelSerializer):
+    membres_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Foyer
+        fields = ['id', 'nom', 'code', 'membres_count', 'created_at']
+
+    def get_membres_count(self, obj):
+        return obj.membres.count()
+
+class MembreFoyerSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only = True)
+
+    class Meta:
+        model = MembreFoyer
+        fields = ['id', 'user', 'role', 'joined_at']

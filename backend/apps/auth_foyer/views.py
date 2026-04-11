@@ -6,7 +6,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import UserSerializer, RegisterSerializer
+from .serializers import UserSerializer, RegisterSerializer, FoyerSerializer, MembreFoyerSerializer
+from .models import User, Foyer, MembreFoyer
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -44,3 +45,39 @@ class MeView(APIView):
 
     def get(self, request):
         return Response(UserSerializer(request.user).data)
+
+class FoyerView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        membre = MembreFoyer.objects.filter(user=request.user).select_related('foyer').first()
+        if not membre:
+            return Response({'error': 'Vous n\'êtes dans aucun foyer'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(FoyerSerializer(membre.foyer).data)
+
+class RejoindreFoyerView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        code = request.data.get('code')
+        if not code:
+            return Response({'error': 'Code foyer Requis'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            foyer = Foyer.objects.get(code=code)
+        except Foyer.DoesNotExist:
+            return Response({'error': 'Foyer Introuvable'}, status=status.HTTP_404_NOT_FOUND)
+        if MembreFoyer.objects.filter(user=request.user, foyer=foyer).exists():
+            return Response({'error': 'Vous êtes déjà membre de ce foyer'}, status=status.HTTP_400_BAD_REQUEST)
+        MembreFoyer.objects.filter(user=request.user).delete()
+        MembreFoyer.objects.create(user=request.user, foyer=foyer, role='membre')
+        return Response(FoyerSerializer(foyer).data)
+
+class MembresFoyerView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        membre = MembreFoyer.objects.filter(user=request.user).select_related('foyer').first()
+        if not membre:
+            return Response({'error':'VOus n\'êtes membre d\'aucun foyer'}, status=status.HTTP_404_NOT_FOUND)
+        membres = MembreFoyer.objects.filter(foyer=membre.foyer).select_related('user')
+        return Response(MembreFoyerSerializer(membres, many=True).data)
