@@ -16,7 +16,7 @@ def get_foyer(user):
         return None
     
 class LotListView(APIView):
-    permissions_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     
     @extend_schema(
         tags=["Lots"],
@@ -46,7 +46,7 @@ class LotListView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 class LotDetailView(APIView):
-    permissions_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     
     def get_lot(self, pk, foyer):
         try:
@@ -85,6 +85,10 @@ class LotDetailView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+    @extend_schema(
+        tags=["Lots"],
+        responses={204: None}
+    )
     def delete(self, request, pk):
         foyer = get_foyer(request.user)
         if not foyer:
@@ -98,8 +102,12 @@ class LotDetailView(APIView):
 
 class StockAlimentView(APIView):
     """Stock total par aliment — somme des lots actifs"""
-    permissions_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     
+    @extend_schema(
+        tags=["Inventory"],
+        responses=None
+    )
     def get(self, request):
         foyer = get_foyer(request.user)
         if not foyer:

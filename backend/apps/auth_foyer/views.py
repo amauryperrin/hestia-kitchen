@@ -8,12 +8,15 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import UserSerializer, RegisterSerializer, FoyerSerializer, MembreFoyerSerializer, LoginSerializer
 from .models import User, Foyer, MembreFoyer
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework import serializers as drf_serializers
+
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
+        tags=["Auth"],
         request=RegisterSerializer,
         responses=UserSerializer
     )
@@ -33,6 +36,7 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
+        tags=["Auth"],
         request=LoginSerializer,
         responses=UserSerializer
     )
@@ -56,7 +60,7 @@ class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        request=RegisterSerializer,
+        tags=["Auth"],
         responses=UserSerializer
     )
     
@@ -67,10 +71,9 @@ class FoyerView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        request=FoyerSerializer,
+        tags=["Foyer"],
         responses=UserSerializer
     )
-    
     def get(self, request):
         membre = MembreFoyer.objects.filter(user=request.user).select_related('foyer').first()
         if not membre:
@@ -81,10 +84,13 @@ class RejoindreFoyerView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        request=FoyerSerializer,
-        responses=UserSerializer
+        tags=["Foyer"],
+        request=inline_serializer(
+            name='RejoindreRequest',
+            fields={'code': drf_serializers.CharField()}
+            ),
+        responses=FoyerSerializer
     )
-    
     def post(self, request):
         code = request.data.get('code')
         if not code:
@@ -103,10 +109,9 @@ class MembresFoyerView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        request=MembreFoyerSerializer,
-        responses=UserSerializer
+        tags=["Foyer"],
+        responses=MembreFoyerSerializer
     )
-    
     def get(self, request):
         membre = MembreFoyer.objects.filter(user=request.user).select_related('foyer').first()
         if not membre:
