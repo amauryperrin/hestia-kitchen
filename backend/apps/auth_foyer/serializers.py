@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from .models import User, Foyer, MembreFoyer
+from apps.planning.models import Moment
+
 import random
 import string
 
@@ -30,6 +32,17 @@ class RegisterSerializer(serializers.ModelSerializer):
         code = generate_foyer_code()
         foyer = Foyer.objects.create(nom=f"Foyer de {user.first_name}", code=code)
         MembreFoyer.objects.create(user=user, foyer=foyer, role='admin')
+        
+        moments_defaut = [
+            {'nom': 'Petit-déjeuner', 'ordre': 1, 'is_default': True},
+            {'nom': 'Déjeuner', 'ordre': 2, 'is_default': True},
+            {'nom': 'Collation', 'ordre': 3, 'is_default': True},
+            {'nom': 'Dîner', 'ordre': 4, 'is_default': True},
+        ]
+        
+        for moment in moments_defaut:
+            Moment.objects.create(foyer=foyer, **moment)
+        
         return user
 
 class FoyerSerializer(serializers.ModelSerializer):
