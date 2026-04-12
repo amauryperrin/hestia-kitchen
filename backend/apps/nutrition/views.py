@@ -5,6 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Categorie, Aliment, Produit
 from .serializers import CategorieSerializer, AlimentSerializer, ProduitSerializer
 from apps.auth_foyer.models import MembreFoyer
+from drf_spectacular.utils import extend_schema
+
 
 def get_foyer(user):
     membre = MembreFoyer.objects.filter(user=user).select_related('foyer').first()
@@ -17,10 +19,19 @@ def get_foyer(user):
 class CategorieListView(APIView):
     permission_classes = [IsAuthenticated]
     
+    @extend_schema(
+        tags=["Nutrition"],
+        responses=CategorieSerializer
+    )
     def get(self, request):
         categories = Categorie.objects.all()
         return Response(CategorieSerializer(categories, many=True).data)
     
+    @extend_schema(
+        tags=["Nutrition"],
+        request=CategorieSerializer,
+        responses=CategorieSerializer
+    )
     def post(self, request):
         serializer = CategorieSerializer(data=request.data)
         if serializer.is_valid():
@@ -31,6 +42,10 @@ class CategorieListView(APIView):
 class AlimentListView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["Nutrition"],
+        responses=AlimentSerializer
+    )
     def get(self, request):
         foyer = get_foyer(request.user)
         if not foyer:
@@ -38,6 +53,12 @@ class AlimentListView(APIView):
         aliments = Aliment.objects.filter(foyer=foyer).select_related('categorie').order_by('-derniere_utilisation')
         return Response(AlimentSerializer(aliments, many=True).data)
 
+    
+    @extend_schema(
+        tags=["Nutrition"],
+        request=AlimentSerializer,
+        responses=AlimentSerializer
+    )
     def post(self, request):
         foyer = get_foyer(request.user)
         if not foyer:
@@ -57,29 +78,43 @@ class AlimentDetailView(APIView):
         except Aliment.DoesNotExist:
             return None
     
+    
+    @extend_schema(
+        tags=["Nutrition"],
+        responses=AlimentSerializer
+    )
     def get(self, request, pk):
         foyer = get_foyer(request.user)
         aliment =  self.get_aliment(pk, foyer)
         if not aliment:
-            return Response({'error', 'Aliment Introuvable'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Aliment Introuvable'}, status=status.HTTP_404_NOT_FOUND)
         return Response(AlimentSerializer(aliment).data)
     
+    @extend_schema(
+        tags=["Nutrition"],
+        request=AlimentSerializer,
+        responses=AlimentSerializer
+    )
     def put(self, request, pk):
         foyer = get_foyer(request.user)
         aliment = self.get_aliment(pk, foyer)
         if not aliment:
-            return Response({'error', 'Aliment Introuvable'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Aliment Introuvable'}, status=status.HTTP_404_NOT_FOUND)
         serializer = AlimentSerializer(aliment, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+    @extend_schema(
+        tags=["Nutrition"],
+        responses={204: None}
+    )
     def delete(self, request, pk):
         foyer = get_foyer(request.user)
         aliment = self.get_aliment(pk, foyer)
         if not aliment:
-            return Response({'error', 'Aliment Introuvable'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Aliment Introuvable'}, status=status.HTTP_404_NOT_FOUND)
         aliment.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
             

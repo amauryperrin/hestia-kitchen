@@ -48,3 +48,7 @@ class MembreFoyerSerializer(serializers.ModelSerializer):
     class Meta:
         model = MembreFoyer
         fields = ['id', 'user', 'role', 'joined_at']
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)

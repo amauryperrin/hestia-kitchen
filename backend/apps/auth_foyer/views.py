@@ -6,12 +6,17 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import UserSerializer, RegisterSerializer, FoyerSerializer, MembreFoyerSerializer
+from .serializers import UserSerializer, RegisterSerializer, FoyerSerializer, MembreFoyerSerializer, LoginSerializer
 from .models import User, Foyer, MembreFoyer
+from drf_spectacular.utils import extend_schema
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        request=RegisterSerializer,
+        responses=UserSerializer
+    )
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
@@ -27,28 +32,45 @@ class RegisterView(APIView):
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        request=LoginSerializer,
+        responses=UserSerializer
+    )
     def post(self, request):
-        email = request.data.get('email')
-        password = request.data.get('password')
-        user = authenticate(request, username=email, password=password)
-        if user:
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                'user': UserSerializer(user).data,
-                'access': str(refresh.access_token),
-                'refresh': str(refresh)
-            })
-        return Response({'error': 'Email ou mot de passe incorrect'}, status=status.HTTP_401_UNAUTHORIZED)
+        serializer = LoginSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            password = serializer.validated_data['password']
+            user = authenticate(request, username=email, password=password)
+            if user:
+                refresh = RefreshToken.for_user(user)
+                return Response({
+                    'user': UserSerializer(user).data,
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh)
+                })
+            return Response({'error': 'Email ou mot de passe incorrect'}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        request=RegisterSerializer,
+        responses=UserSerializer
+    )
+    
     def get(self, request):
         return Response(UserSerializer(request.user).data)
 
 class FoyerView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        request=FoyerSerializer,
+        responses=UserSerializer
+    )
+    
     def get(self, request):
         membre = MembreFoyer.objects.filter(user=request.user).select_related('foyer').first()
         if not membre:
@@ -58,6 +80,11 @@ class FoyerView(APIView):
 class RejoindreFoyerView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        request=FoyerSerializer,
+        responses=UserSerializer
+    )
+    
     def post(self, request):
         code = request.data.get('code')
         if not code:
@@ -75,6 +102,11 @@ class RejoindreFoyerView(APIView):
 class MembresFoyerView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        request=MembreFoyerSerializer,
+        responses=UserSerializer
+    )
+    
     def get(self, request):
         membre = MembreFoyer.objects.filter(user=request.user).select_related('foyer').first()
         if not membre:

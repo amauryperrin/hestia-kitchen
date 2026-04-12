@@ -1,9 +1,10 @@
 from django.db import models
 from apps.auth_foyer.models import User, Foyer
-from apps.nutrition.models import Produit
+from apps.nutrition.models import Produit, Aliment
 
 class Lot(models.Model):
-    produit = models.ForeignKey(Produit, on_delete=models.CASCADE, related_name='lots')
+    aliment = models.ForeignKey(Aliment, on_delete=models.PROTECT, related_name='lots')
+    produit = models.ForeignKey(Produit, on_delete=models.SET_NULL, null=True, blank=True, related_name='lots')
     foyer = models.ForeignKey(Foyer, on_delete=models.CASCADE, related_name='lots')
     quantite = models.FloatField()
     date_achat = models.DateField()
