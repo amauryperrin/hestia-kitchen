@@ -27,7 +27,7 @@ class Repas(models.Model):
         return f"{self.user.email} - {self.date} - {self.moment.nom}"
     
 class LigneRepas(models.Model):
-    planning = models.ForeignKey(Repas, on_delete=models.CASCADE, related_name='lignes')
+    repas = models.ForeignKey(Repas, on_delete=models.CASCADE, related_name='lignes')
     aliment = models.ForeignKey(Aliment, on_delete=models.PROTECT, related_name='lignes_repas')
     quantite = models.FloatField()
     photo = models.CharField(max_length=500, null=True, blank=True)

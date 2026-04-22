@@ -14,13 +14,13 @@ class LigneRepasSerializer(serializers.ModelSerializer):
     class Meta:
         model = LigneRepas
         fields = [
-            'id', 'aliment', 'aliment_detail', 'quantite',
+            'id', 'repas', 'aliment', 'aliment_detail', 'quantite',
             'calories_snapshot', 'proteines_snapshot', 'glucides_snapshot',
             'lipides_snapshot', 'fibres_snapshot', 'prix_snapshot',
             'lot_peremption_snapshot', 'created_at'
         ]
         read_only_fields = [
-            'id', 'calories_snapshot', 'proteines_snapshot', 'glucides_snapshot',
+            'id', 'repas', 'calories_snapshot', 'proteines_snapshot', 'glucides_snapshot',
             'lipides_snapshot', 'fibres_snapshot', 'prix_snapshot',
             'lot_peremption_snapshot', 'created_at'
         ]
