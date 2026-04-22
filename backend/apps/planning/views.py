@@ -141,3 +141,34 @@ class LigneRepasListView(APIView):
         aliment.save()
         
         return Response(LigneRepasSerializer(ligne).data, status=status.HTTP_201_CREATED)
+    
+class LigneRepasDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_ligne(self, pk, user):
+        try:
+            return LigneRepas.objects.get(pk=pk, repas__user=user)
+        except LigneRepas.DoesNotExist:
+            return None
+    
+    @extend_schema(tags=["Planning"], responses={204: None})
+    def delete(self, request, pk):
+        ligne = self.get_ligne(pk, request.user)
+        if not ligne:
+            return Response({'error':'Ligne introuvable'}, status=status.HTTP_404_NOT_FOUND)
+        
+        foyer = get_foyer(request.user)
+        if not foyer:
+            return Response({'error': 'Aucun Foyer'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Recréation d'un Lot avec la quantité de la ligne et date de péremption de la ligne
+        Lot.objects.create(
+            aliment=ligne.aliment,
+            foyer=foyer,
+            quantite=ligne.quantite,
+            date_achat=ligne.repas.date,
+            date_peremption=ligne.lot_peremption_snapshot,
+            created_by=request.user
+        )
+        ligne.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

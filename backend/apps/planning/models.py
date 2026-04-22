@@ -42,4 +42,5 @@ class LigneRepas(models.Model):
 
     def __str__(self):
         return f"{self.aliment.nom} - {self.quantite}g"
+    
 
