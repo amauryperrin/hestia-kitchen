@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Categorie, Aliment, Produit
 from .serializers import CategorieSerializer, AlimentSerializer, ProduitSerializer
 from apps.auth_foyer.models import MembreFoyer
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 import requests
 import redis
 from django.conf import settings
@@ -133,7 +133,9 @@ class AlimentDetailView(APIView):
 class OpenFoodFactsSearchView(APIView):
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(tags=["Nutrition"], responses=None)
+    @extend_schema(tags=["Nutrition"], parameters=[
+        OpenApiParameter(name='q', description='Terme de recherche', required=True, type=str)
+    ], responses=None)
     def get(self, request):
         q = request.query_params.get('q')
         if not q:
