@@ -6,7 +6,19 @@ from .models import Categorie, Aliment, Produit
 from .serializers import CategorieSerializer, AlimentSerializer, ProduitSerializer
 from apps.auth_foyer.models import MembreFoyer
 from drf_spectacular.utils import extend_schema
+import requests
+import redis
+from django.conf import settings
+from django.core.cache import cache
 
+r = redis.from_url(settings.REDIS_URL)
+
+def check_off_rate_limit():
+    key = 'off_requests_count'
+    count = r.incr(key)
+    if count == 1:
+        r.expire(key, 60)
+    return count <= 8
 
 def get_foyer(user):
     membre = MembreFoyer.objects.filter(user=user).select_related('foyer').first()
@@ -118,4 +130,57 @@ class AlimentDetailView(APIView):
         aliment.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
             
-            
+class OpenFoodFactsSearchView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Nutrition"], responses=None)
+    def get(self, request):
+        q = request.query_params.get('q')
+        if not q:
+            return Response({'error': 'Paramètre q requis'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Cache Redis
+        cache_key = f'off_search_{q.lower().strip()}'
+        cached = cache.get(cache_key)
+        if cached:
+            return Response(cached)
+        
+        # Rate Limit
+        if not check_off_rate_limit():
+            return Response({'error': 'Trop de requêtes vers OpenFoodFacts, réessayez dans une minute'}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        
+        # Appel OFF
+        try:
+            response = requests.get(
+                'https://world.openfoodfacts.org/cgi/search.pl',
+                params={
+                    'search_terms': q,
+                    'json': 1,
+                    'fields': 'product_name,nutriments,quantity',
+                    'page_size': 5,
+                },
+                headers={'User-Agent': 'HestiaKitchen/1.0 (contact@hestia.app)'},
+                timeout=5
+            )
+            data = response.json()
+        except Exception:
+            return Response({'error': 'OpenFoodFacts indisponible'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        # Formatage des résultats
+        results = []
+        for product in data.get('products', []):
+            print(product)
+            nutriments = product.get('nutriments', {})
+            results.append({
+                'nom': product.get('product_name', ''),
+                'calories': nutriments.get('energy-kcal_100g'),
+                'proteines': nutriments.get('proteins_100g'),
+                'glucides': nutriments.get('carbohydrates_100g'),
+                'lipides': nutriments.get('fat_100g'),
+                'fibres': nutriments.get('fiber_100g'),
+            })
+        
+        # Mise en cache 1 heure
+        cache.set(cache_key, results, 60 * 60)
+
+        return Response(results)
