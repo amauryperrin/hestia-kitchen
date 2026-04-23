@@ -1,6 +1,7 @@
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+from celery.schedules import crontab
 
 load_dotenv()
 
@@ -128,3 +129,20 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 AUTH_USER_MODEL = 'auth_foyer.User'
+
+CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Europe/Paris'
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+# Tâches planifiées
+
+CELERY_BEAT_SCHEDULE = {
+    'backup-db-quotidien': {
+        'task': 'core.tasks.backup_database',
+        'schedule': crontab(hour=3, minute=0),  # tous les jours à 3h du matin
+    },
+}
